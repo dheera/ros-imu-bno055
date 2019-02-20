@@ -193,7 +193,7 @@
 #define DIAG_SYS_STAT_ADDR 4
 #define DIAG_SYS_ERR_ADDR 5
 
-namespace bno055_i2c {
+namespace imu_bno055 {
 
 class BNO055I2CActivity {
   public:

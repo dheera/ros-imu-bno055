@@ -1,4 +1,4 @@
-#include "bno055_i2c/bno055_i2c_activity.h"
+#include "imu_bno055/bno055_i2c_activity.h"
 
 // assumes little endian!
 
@@ -36,7 +36,7 @@ typedef struct {
   uint8_t system_error_code;
 } IMURecord;
 
-namespace bno055_i2c {
+namespace imu_bno055 {
 
 // ******** constructors ******** //
 

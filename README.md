@@ -1,4 +1,4 @@
-# bno055\_i2c
+# imu\_bno055\_i2c
 
 This is a ROS node for the BNO055 IMU that communicates via I2C and without any dependencies besides libi2c-dev. It is specifically targeted at using a BNO055 with NVIDIA boards such as the TX1, TX2, and Xavier, or any other board that has native I2C.
 

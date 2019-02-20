@@ -9,13 +9,13 @@ catkin_package(INCLUDE_DIRS include)
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(bno055_i2c_node src/bno055_i2c_activity.cpp src/bno055_i2c_node.cpp src/watchdog.cpp)
+add_executable(imu_bno055_i2c_node src/bno055_i2c_activity.cpp src/imu_bno055_i2c_node.cpp src/watchdog.cpp)
 
 include_directories(${catkin_INCLUDE_DIRS})
 
-target_link_libraries(bno055_i2c_node ${catkin_LIBRARIES})
+target_link_libraries(imu_bno055_i2c_node ${catkin_LIBRARIES})
 
-install(TARGETS bno055_i2c_node
+install(TARGETS imu_bno055_i2c_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

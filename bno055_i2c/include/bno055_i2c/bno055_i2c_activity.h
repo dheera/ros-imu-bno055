@@ -20,7 +20,7 @@
 
 #define BNO055_ID 0xA0
 
-#define BNO055_ADDRESS_A 0x28
+#define BNO055_ADDRESS_A 0x28 // default
 #define BNO055_ADDRESS_B 0x29
 
 #define BNO055_CHIP_ID_ADDR 0x00
@@ -186,6 +186,13 @@
 #define BNO055_REMAP_SIGN_P6 0x07
 #define BNO055_REMAP_SIGN_P7 0x05
 
+#define DIAG_CALIB_STAT 0
+#define DIAG_SELFTEST_RESULT 1
+#define DIAG_INTR_STAT 2
+#define DIAG_SYS_CLK_STAT_ADDR 3
+#define DIAG_SYS_STAT_ADDR 4
+#define DIAG_SYS_ERR_ADDR 5
+
 namespace bno055_i2c {
 
 class BNO055I2CActivity {
@@ -200,7 +207,7 @@ class BNO055I2CActivity {
     bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
 
   private:
-	bool setup();
+	bool reset();
 
     // class variables
 	uint32_t seq = 0;

@@ -1,5 +1,7 @@
 #include "bno055_i2c/bno055_i2c_activity.h"
 
+// assumes little endian!
+
 // order of this struct is designed to match the I2C registers
 // so all data can be read in one fell swoop
 typedef struct {
@@ -44,15 +46,42 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
     nh_priv.param("device", param_device, (std::string)"/dev/i2c-1");
     nh_priv.param("address", param_address, (int)BNO055_ADDRESS_A);
     nh_priv.param("frame_id", param_frame_id, (std::string)"imu");
+
+    current_status.level = 0;
+    current_status.name = "BNO055 IMU";
+    current_status.hardware_id = "bno055_i2c";
 }
 
 // ******** private methods ******** //
 
-bool BNO055I2CActivity::setup() {
+bool BNO055I2CActivity::reset() {
+    int i = 0;
+
     i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
+
+    // reset
+    i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
+
+    // wait for chip to come back online
+    while(!i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
+        ros::Duration(0.010).sleep();
+        if(i++ > 500) {
+            ROS_ERROR_STREAM("chip did not come back online in 5 seconds after reset");
+            return false;
+        }
+    }
+    ros::Duration(0.050).sleep();
+
+    // normal power mode
     i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
+    ros::Duration(0.010).sleep();
+
+    i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
+    i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
+    ros::Duration(0.025).sleep();
 
     i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
+    return true;
 }
 
 // ******** public methods ******** //
@@ -80,11 +109,24 @@ bool BNO055I2CActivity::start() {
 
     file = open(param_device.c_str(), O_RDWR);
     if(ioctl(file, I2C_SLAVE, param_address) < 0) {
+        ROS_ERROR("i2c device open failed");
         return false;
     }
 
     if(i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
         ROS_ERROR("incorrect chip ID");
+        return false;
+    }
+
+    ROS_INFO_STREAM("rev ids:"
+      << " accel:" << i2c_smbus_read_byte_data(file, BNO055_ACCEL_REV_ID_ADDR)
+      << " mag:" << i2c_smbus_read_byte_data(file, BNO055_MAG_REV_ID_ADDR)
+      << " gyro:" << i2c_smbus_read_byte_data(file, BNO055_GYRO_REV_ID_ADDR)
+      << " sw:" << i2c_smbus_read_word_data(file, BNO055_SW_REV_ID_LSB_ADDR)
+      << " bl:" << i2c_smbus_read_byte_data(file, BNO055_BL_REV_ID_ADDR));
+
+    if(!reset()) {
+        ROS_ERROR("chip reset and setup failed");
         return false;
     }
 
@@ -154,13 +196,11 @@ bool BNO055I2CActivity::spinOnce() {
     msg_temp.header.seq = seq;
     msg_temp.temperature = (double)record.temperature;
 
-    diagnostic_msgs::DiagnosticStatus msg_status;
-
     pub_data.publish(msg_data);
     pub_raw.publish(msg_raw);
     pub_mag.publish(msg_mag);
     pub_temp.publish(msg_temp);
-    pub_status.publish(msg_status);
+    pub_status.publish(current_status);
 
     return true;    
 }
@@ -181,7 +221,10 @@ bool BNO055I2CActivity::stop() {
 }
 
 bool BNO055I2CActivity::onServiceReset(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res) {
-    // TODO implement this
+    if(!reset()) {
+        ROS_ERROR("chip reset and setup failed");
+        return false;
+    }
     return true;
 }
 

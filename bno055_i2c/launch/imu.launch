@@ -1,0 +1,7 @@
+<launch>
+    <node name="imu_node" pkg="bno055_i2c" type="bno055_i2c_node">
+        <param name="device" type="string" value="/dev/i2c-1"/>
+        <param name="address" type="int" value="40"/> <!-- 0x28 == 40 is the default for BNO055 -->
+        <param name="frame_id" type="string" value="imu"/>
+    </node>
+</launch>

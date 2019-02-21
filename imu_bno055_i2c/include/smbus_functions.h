@@ -1,5 +1,8 @@
 /* smbus_functions.h */
-/* extracted from i2c-dev.h in 16.04 since the smbus functions were removed in 18.04 */
+/* I found that i2c-dev.h in 16.04 + libi2c-dev includes the i2c_smbus_... functions
+ * and 18.04 + libi2c-dev does not include them. In the interest of avoiding these
+ * shenanigans and make a ROS package that painlessly "just works" I make a local copy of all
+ * those functions (which are really just inline functions using ioctl) here. */
 
 #ifndef _smbus_functions_dot_h
 #define _smbus_functions_dot_h

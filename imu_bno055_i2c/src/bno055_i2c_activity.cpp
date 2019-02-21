@@ -1,3 +1,10 @@
+/* bno055_i2c_activity.cpp
+ * Author: Dheera Venkatraman <dheera@dheera.net>
+ *
+ * Defines a BNO055I2C Activity class, constructed with node handles
+ * and which handles all ROS duties.
+ */
+
 #include "imu_bno055/bno055_i2c_activity.h"
 
 // assumes little endian!

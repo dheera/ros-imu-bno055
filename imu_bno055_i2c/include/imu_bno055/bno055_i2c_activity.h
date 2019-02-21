@@ -233,42 +233,42 @@ typedef struct {
 
 class BNO055I2CActivity {
   public:
-	BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv);
+    BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv);
 
-	bool start();
-	bool stop();
-	bool spinOnce();
+    bool start();
+    bool stop();
+    bool spinOnce();
 
     bool onServiceReset(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
     bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
 
   private:
-	bool reset();
+    bool reset();
 
     // class variables
-	uint32_t seq = 0;
+    uint32_t seq = 0;
     int file;
     diagnostic_msgs::DiagnosticStatus current_status;
 
     // ROS parameters
-	std::string param_frame_id;
-	std::string param_device;
-	int param_address;
+    std::string param_frame_id;
+    std::string param_device;
+    int param_address;
 
     // ROS node handles
-	ros::NodeHandle nh;
-	ros::NodeHandle nh_priv;
+    ros::NodeHandle nh;
+    ros::NodeHandle nh_priv;
 
     // ROS publishers
-	ros::Publisher pub_data;
-	ros::Publisher pub_raw;
-	ros::Publisher pub_mag;
-	ros::Publisher pub_temp;
-	ros::Publisher pub_status;
+    ros::Publisher pub_data;
+    ros::Publisher pub_raw;
+    ros::Publisher pub_mag;
+    ros::Publisher pub_temp;
+    ros::Publisher pub_status;
 
     // ROS subscribers
-	ros::ServiceServer service_calibrate;
-	ros::ServiceServer service_reset;
+    ros::ServiceServer service_calibrate;
+    ros::ServiceServer service_reset;
 };
 
 }

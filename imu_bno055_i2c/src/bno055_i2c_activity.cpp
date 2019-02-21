@@ -43,13 +43,13 @@ namespace imu_bno055 {
 BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv) :
   nh(_nh), nh_priv(_nh_priv) {
     ROS_INFO("initializing");
-    nh_priv.param("device", param_device, (std::string)"/dev/_i2c-1");
+    nh_priv.param("device", param_device, (std::string)"/dev/i2c-1");
     nh_priv.param("address", param_address, (int)BNO055_ADDRESS_A);
     nh_priv.param("frame_id", param_frame_id, (std::string)"imu");
 
     current_status.level = 0;
     current_status.name = "BNO055 IMU";
-    current_status.hardware_id = "bno055__i2c";
+    current_status.hardware_id = "bno055_i2c";
 
     diagnostic_msgs::KeyValue calib_stat;
     calib_stat.key = "Calibration status";
@@ -93,7 +93,7 @@ bool BNO055I2CActivity::reset() {
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
 
     // wait for chip to come back online
-    while(!_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
+    while(_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
         ros::Duration(0.010).sleep();
         if(i++ > 500) {
             ROS_ERROR_STREAM("chip did not come back online in 5 seconds after reset");
@@ -139,7 +139,7 @@ bool BNO055I2CActivity::start() {
 
     file = open(param_device.c_str(), O_RDWR);
     if(ioctl(file, I2C_SLAVE, param_address) < 0) {
-        ROS_ERROR("_i2c device open failed");
+        ROS_ERROR("i2c device open failed");
         return false;
     }
 

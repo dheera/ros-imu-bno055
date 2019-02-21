@@ -57,28 +57,28 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
     current_status.values.push_back(calib_stat);
 
     diagnostic_msgs::KeyValue selftest_result;
-    calib_stat.key = "Self-test result";
-    calib_stat.value = "";
+    selftest_result.key = "Self-test result";
+    selftest_result.value = "";
     current_status.values.push_back(selftest_result);
 
     diagnostic_msgs::KeyValue intr_stat;
-    calib_stat.key = "Interrupt status";
-    calib_stat.value = "";
+    intr_stat.key = "Interrupt status";
+    intr_stat.value = "";
     current_status.values.push_back(intr_stat);
 
     diagnostic_msgs::KeyValue sys_clk_stat;
-    calib_stat.key = "System clock status";
-    calib_stat.value = "";
+    sys_clk_stat.key = "System clock status";
+    sys_clk_stat.value = "";
     current_status.values.push_back(sys_clk_stat);
 
     diagnostic_msgs::KeyValue sys_stat;
-    calib_stat.key = "System status";
-    calib_stat.value = "";
+    sys_stat.key = "System status";
+    sys_stat.value = "";
     current_status.values.push_back(sys_stat);
 
     diagnostic_msgs::KeyValue sys_err;
-    calib_stat.key = "System error";
-    calib_stat.value = "";
+    sys_err.key = "System error";
+    sys_err.value = "";
     current_status.values.push_back(sys_err);
 }
 
@@ -226,18 +226,20 @@ bool BNO055I2CActivity::spinOnce() {
     msg_temp.header.seq = seq;
     msg_temp.temperature = (double)record.temperature;
 
-    current_status.values[DIAG_CALIB_STAT].value = record.calibration_status;
-    current_status.values[DIAG_SELFTEST_RESULT].value = record.self_test_result;
-    current_status.values[DIAG_INTR_STAT].value = record.interrupt_status;
-    current_status.values[DIAG_SYS_CLK_STAT].value = record.system_clock_status;
-    current_status.values[DIAG_SYS_STAT].value = record.system_status;
-    current_status.values[DIAG_SYS_ERR].value = record.system_error_code;
-
     pub_data.publish(msg_data);
     pub_raw.publish(msg_raw);
     pub_mag.publish(msg_mag);
     pub_temp.publish(msg_temp);
-    pub_status.publish(current_status);
+
+    if(seq % 50 == 0) {
+        current_status.values[DIAG_CALIB_STAT].value = std::to_string(record.calibration_status);
+        current_status.values[DIAG_SELFTEST_RESULT].value = std::to_string(record.self_test_result);
+        current_status.values[DIAG_INTR_STAT].value = std::to_string(record.interrupt_status);
+        current_status.values[DIAG_SYS_CLK_STAT].value = std::to_string(record.system_clock_status);
+        current_status.values[DIAG_SYS_STAT].value = std::to_string(record.system_status);
+        current_status.values[DIAG_SYS_ERR].value = std::to_string(record.system_error_code);
+        pub_status.publish(current_status);
+    }
 
     return true;    
 }

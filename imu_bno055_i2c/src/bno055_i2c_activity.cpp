@@ -88,9 +88,11 @@ bool BNO055I2CActivity::reset() {
     int i = 0;
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
+    ros::Duration(0.025).sleep();
 
     // reset
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
+    ros::Duration(0.025).sleep();
 
     // wait for chip to come back online
     while(_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
@@ -100,7 +102,7 @@ bool BNO055I2CActivity::reset() {
             return false;
         }
     }
-    ros::Duration(0.050).sleep();
+    ros::Duration(0.100).sleep();
 
     // normal power mode
     _i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
@@ -111,6 +113,8 @@ bool BNO055I2CActivity::reset() {
     ros::Duration(0.025).sleep();
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
+    ros::Duration(0.025).sleep();
+
     return true;
 }
 

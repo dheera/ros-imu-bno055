@@ -1,40 +1,11 @@
+/* bno055_i2c_activity.cpp
+ * Author: Dheera Venkatraman <dheera@dheera.net>
+ *
+ * Defines a BNO055I2C Activity class, constructed with node handles
+ * and which handles all ROS duties.
+ */
+
 #include "imu_bno055/bno055_i2c_activity.h"
-
-// assumes little endian!
-
-// order of this struct is designed to match the I2C registers
-// so all data can be read in one fell swoop
-typedef struct {
-  int16_t raw_linear_acceleration_x;
-  int16_t raw_linear_acceleration_y;
-  int16_t raw_linear_acceleration_z;
-  int16_t raw_magnetic_field_x;
-  int16_t raw_magnetic_field_y;
-  int16_t raw_magnetic_field_z;
-  int16_t raw_angular_velocity_x;
-  int16_t raw_angular_velocity_y;
-  int16_t raw_angular_velocity_z;
-  int16_t fused_heading;
-  int16_t fused_roll;
-  int16_t fused_pitch;
-  int16_t fused_orientation_w;
-  int16_t fused_orientation_x;
-  int16_t fused_orientation_y;
-  int16_t fused_orientation_z;
-  int16_t fused_linear_acceleration_x;
-  int16_t fused_linear_acceleration_y;
-  int16_t fused_linear_acceleration_z;
-  int16_t gravity_vector_x;
-  int16_t gravity_vector_y;
-  int16_t gravity_vector_z;
-  int8_t temperature;
-  uint8_t calibration_status;
-  uint8_t self_test_result;
-  uint8_t interrupt_status;
-  uint8_t system_clock_status;
-  uint8_t system_status;
-  uint8_t system_error_code;
-} IMURecord;
 
 namespace imu_bno055 {
 
@@ -88,9 +59,11 @@ bool BNO055I2CActivity::reset() {
     int i = 0;
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
+    ros::Duration(0.025).sleep();
 
     // reset
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
+    ros::Duration(0.025).sleep();
 
     // wait for chip to come back online
     while(_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
@@ -100,7 +73,7 @@ bool BNO055I2CActivity::reset() {
             return false;
         }
     }
-    ros::Duration(0.050).sleep();
+    ros::Duration(0.100).sleep();
 
     // normal power mode
     _i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
@@ -111,6 +84,8 @@ bool BNO055I2CActivity::reset() {
     ros::Duration(0.025).sleep();
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
+    ros::Duration(0.025).sleep();
+
     return true;
 }
 
@@ -176,8 +151,12 @@ bool BNO055I2CActivity::spinOnce() {
 
     // can only read a length of 0x20 at a time, so do it in 2 reads
     // BNO055_LINEAR_ACCEL_DATA_X_LSB_ADDR is the start of the data block that aligns with the IMURecord struct
-    _i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record);
-    _i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20);
+    if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record) != 0x20) {
+        return false;
+    }
+    if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20) != 0x13) {
+        return false;
+    }
 
     sensor_msgs::Imu msg_raw;
     msg_raw.header.stamp = time;

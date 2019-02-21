@@ -197,44 +197,78 @@
 
 namespace imu_bno055 {
 
+// order of this struct is designed to match the I2C registers
+// so all data can be read in one fell swoop
+typedef struct {
+  int16_t raw_linear_acceleration_x;
+  int16_t raw_linear_acceleration_y;
+  int16_t raw_linear_acceleration_z;
+  int16_t raw_magnetic_field_x;
+  int16_t raw_magnetic_field_y;
+  int16_t raw_magnetic_field_z;
+  int16_t raw_angular_velocity_x;
+  int16_t raw_angular_velocity_y;
+  int16_t raw_angular_velocity_z;
+  int16_t fused_heading;
+  int16_t fused_roll;
+  int16_t fused_pitch;
+  int16_t fused_orientation_w;
+  int16_t fused_orientation_x;
+  int16_t fused_orientation_y;
+  int16_t fused_orientation_z;
+  int16_t fused_linear_acceleration_x;
+  int16_t fused_linear_acceleration_y;
+  int16_t fused_linear_acceleration_z;
+  int16_t gravity_vector_x;
+  int16_t gravity_vector_y;
+  int16_t gravity_vector_z;
+  int8_t temperature;
+  uint8_t calibration_status;
+  uint8_t self_test_result;
+  uint8_t interrupt_status;
+  uint8_t system_clock_status;
+  uint8_t system_status;
+  uint8_t system_error_code;
+} IMURecord;
+
 class BNO055I2CActivity {
   public:
-	BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv);
+    BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv);
 
-	bool start();
-	bool stop();
-	bool spinOnce();
+    bool start();
+    bool stop();
+    bool spinOnce();
 
     bool onServiceReset(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
     bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
 
   private:
-	bool reset();
+    bool reset();
 
     // class variables
-	uint32_t seq = 0;
+    uint32_t seq = 0;
     int file;
     diagnostic_msgs::DiagnosticStatus current_status;
 
     // ROS parameters
-	std::string param_frame_id;
-	std::string param_device;
-	int param_address;
+    std::string param_frame_id;
+    std::string param_device;
+    int param_address;
 
     // ROS node handles
-	ros::NodeHandle nh;
-	ros::NodeHandle nh_priv;
+    ros::NodeHandle nh;
+    ros::NodeHandle nh_priv;
 
     // ROS publishers
-	ros::Publisher pub_data;
-	ros::Publisher pub_raw;
-	ros::Publisher pub_mag;
-	ros::Publisher pub_temp;
-	ros::Publisher pub_status;
+    ros::Publisher pub_data;
+    ros::Publisher pub_raw;
+    ros::Publisher pub_mag;
+    ros::Publisher pub_temp;
+    ros::Publisher pub_status;
 
     // ROS subscribers
-	ros::ServiceServer service_calibrate;
-	ros::ServiceServer service_reset;
+    ros::ServiceServer service_calibrate;
+    ros::ServiceServer service_reset;
 };
 
 }

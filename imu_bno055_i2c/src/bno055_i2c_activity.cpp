@@ -43,13 +43,43 @@ namespace imu_bno055 {
 BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv) :
   nh(_nh), nh_priv(_nh_priv) {
     ROS_INFO("initializing");
-    nh_priv.param("device", param_device, (std::string)"/dev/i2c-1");
+    nh_priv.param("device", param_device, (std::string)"/dev/_i2c-1");
     nh_priv.param("address", param_address, (int)BNO055_ADDRESS_A);
     nh_priv.param("frame_id", param_frame_id, (std::string)"imu");
 
     current_status.level = 0;
     current_status.name = "BNO055 IMU";
-    current_status.hardware_id = "bno055_i2c";
+    current_status.hardware_id = "bno055__i2c";
+
+    diagnostic_msgs::KeyValue calib_stat;
+    calib_stat.key = "Calibration status";
+    calib_stat.value = "";
+    current_status.values.push_back(calib_stat);
+
+    diagnostic_msgs::KeyValue selftest_result;
+    calib_stat.key = "Self-test result";
+    calib_stat.value = "";
+    current_status.values.push_back(selftest_result);
+
+    diagnostic_msgs::KeyValue intr_stat;
+    calib_stat.key = "Interrupt status";
+    calib_stat.value = "";
+    current_status.values.push_back(intr_stat);
+
+    diagnostic_msgs::KeyValue sys_clk_stat;
+    calib_stat.key = "System clock status";
+    calib_stat.value = "";
+    current_status.values.push_back(sys_clk_stat);
+
+    diagnostic_msgs::KeyValue sys_stat;
+    calib_stat.key = "System status";
+    calib_stat.value = "";
+    current_status.values.push_back(sys_stat);
+
+    diagnostic_msgs::KeyValue sys_err;
+    calib_stat.key = "System error";
+    calib_stat.value = "";
+    current_status.values.push_back(sys_err);
 }
 
 // ******** private methods ******** //
@@ -57,13 +87,13 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
 bool BNO055I2CActivity::reset() {
     int i = 0;
 
-    i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
+    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
 
     // reset
-    i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
+    _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0x20);
 
     // wait for chip to come back online
-    while(!i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
+    while(!_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
         ros::Duration(0.010).sleep();
         if(i++ > 500) {
             ROS_ERROR_STREAM("chip did not come back online in 5 seconds after reset");
@@ -73,14 +103,14 @@ bool BNO055I2CActivity::reset() {
     ros::Duration(0.050).sleep();
 
     // normal power mode
-    i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
+    _i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
     ros::Duration(0.010).sleep();
 
-    i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
-    i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
+    _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
+    _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
     ros::Duration(0.025).sleep();
 
-    i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
+    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
     return true;
 }
 
@@ -109,21 +139,21 @@ bool BNO055I2CActivity::start() {
 
     file = open(param_device.c_str(), O_RDWR);
     if(ioctl(file, I2C_SLAVE, param_address) < 0) {
-        ROS_ERROR("i2c device open failed");
+        ROS_ERROR("_i2c device open failed");
         return false;
     }
 
-    if(i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
+    if(_i2c_smbus_read_byte_data(file, BNO055_CHIP_ID_ADDR) != BNO055_ID) {
         ROS_ERROR("incorrect chip ID");
         return false;
     }
 
     ROS_INFO_STREAM("rev ids:"
-      << " accel:" << i2c_smbus_read_byte_data(file, BNO055_ACCEL_REV_ID_ADDR)
-      << " mag:" << i2c_smbus_read_byte_data(file, BNO055_MAG_REV_ID_ADDR)
-      << " gyro:" << i2c_smbus_read_byte_data(file, BNO055_GYRO_REV_ID_ADDR)
-      << " sw:" << i2c_smbus_read_word_data(file, BNO055_SW_REV_ID_LSB_ADDR)
-      << " bl:" << i2c_smbus_read_byte_data(file, BNO055_BL_REV_ID_ADDR));
+      << " accel:" << _i2c_smbus_read_byte_data(file, BNO055_ACCEL_REV_ID_ADDR)
+      << " mag:" << _i2c_smbus_read_byte_data(file, BNO055_MAG_REV_ID_ADDR)
+      << " gyro:" << _i2c_smbus_read_byte_data(file, BNO055_GYRO_REV_ID_ADDR)
+      << " sw:" << _i2c_smbus_read_word_data(file, BNO055_SW_REV_ID_LSB_ADDR)
+      << " bl:" << _i2c_smbus_read_byte_data(file, BNO055_BL_REV_ID_ADDR));
 
     if(!reset()) {
         ROS_ERROR("chip reset and setup failed");
@@ -146,8 +176,8 @@ bool BNO055I2CActivity::spinOnce() {
 
     // can only read a length of 0x20 at a time, so do it in 2 reads
     // BNO055_LINEAR_ACCEL_DATA_X_LSB_ADDR is the start of the data block that aligns with the IMURecord struct
-    i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record);
-    i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20);
+    _i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record);
+    _i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20);
 
     sensor_msgs::Imu msg_raw;
     msg_raw.header.stamp = time;
@@ -195,6 +225,13 @@ bool BNO055I2CActivity::spinOnce() {
     msg_temp.header.frame_id = param_frame_id;
     msg_temp.header.seq = seq;
     msg_temp.temperature = (double)record.temperature;
+
+    current_status.values[DIAG_CALIB_STAT].value = record.calibration_status;
+    current_status.values[DIAG_SELFTEST_RESULT].value = record.self_test_result;
+    current_status.values[DIAG_INTR_STAT].value = record.interrupt_status;
+    current_status.values[DIAG_SYS_CLK_STAT].value = record.system_clock_status;
+    current_status.values[DIAG_SYS_STAT].value = record.system_status;
+    current_status.values[DIAG_SYS_ERR].value = record.system_error_code;
 
     pub_data.publish(msg_data);
     pub_raw.publish(msg_raw);

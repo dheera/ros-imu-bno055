@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 
 #include <sensor_msgs/Imu.h>
@@ -17,6 +18,7 @@
 #include <diagnostic_msgs/KeyValue.h>
 
 #include <linux/i2c-dev.h>
+#include <smbus_functions.h>
 
 #define BNO055_ID 0xA0
 
@@ -189,9 +191,9 @@
 #define DIAG_CALIB_STAT 0
 #define DIAG_SELFTEST_RESULT 1
 #define DIAG_INTR_STAT 2
-#define DIAG_SYS_CLK_STAT_ADDR 3
-#define DIAG_SYS_STAT_ADDR 4
-#define DIAG_SYS_ERR_ADDR 5
+#define DIAG_SYS_CLK_STAT 3
+#define DIAG_SYS_STAT 4
+#define DIAG_SYS_ERR 5
 
 namespace imu_bno055 {
 

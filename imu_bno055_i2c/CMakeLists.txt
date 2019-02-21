@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(imu_bno055_i2c)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++11 -li2c)
 
 find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs)
 

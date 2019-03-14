@@ -4,7 +4,7 @@ This is a ROS node for the BNO055 IMU that communicates via I2C and without any 
 
 The BNO055 supports I2C and UART communication. This driver supports I2C only. If you are looking for a UART driver, see [this driver](https://github.com/mdrwiega/bosch_imu_driver) by [mdrwiega](https://github.com/mdrwiega) instead.
 
-For use on a Raspberry Pi, you may need to [slow down the I2C clock](https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/i2c-clock-stretching), since the Pi does not support clock stretching. but I have not tested this.
+For use on a Raspberry Pi, you may need to [slow down the I2C clock](https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/i2c-clock-stretching), since the Pi does not support clock stretching. but I have not tested this. Or you can use [software I2C](https://github.com/fivdi/i2c-bus/blob/master/doc/raspberry-pi-software-i2c.md) instead.
 
 Note that you may need to add your user to the i2c group, e.g. `sudo usermod -aG i2c nvidia` if you are on a Jetson TX2.
 

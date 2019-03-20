@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>imu_bno055_i2c</name>
+  <name>imu_bno055</name>
   <version>1.0.0</version>
   <description>I2C driver for a BNO055 IMU. Tested on Jetson TX2.</description>
   <maintainer email="dheera@dheera.net">dheera</maintainer>

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(imu_bno055_i2c)
+project(imu_bno055)
 
 add_compile_options(-std=c++11 -li2c)
 

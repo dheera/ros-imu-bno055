@@ -3,7 +3,7 @@ project(imu_bno055)
 
 add_compile_options(-std=c++11 -li2c)
 
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs diagnostic_msgs)
 
 catkin_package(INCLUDE_DIRS include)
 

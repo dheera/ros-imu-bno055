@@ -1,4 +1,4 @@
-/* imu_bno055_i2c_node.cpp
+/* bno055_i2c_node.cpp
  * Author: Dheera Venkatraman <dheera@dheera.net>
  *
  * Instantiates a BNO055I2C Activity class, as well as
@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     imu_bno055::BNO055I2CActivity* activity = NULL;
     watchdog::Watchdog* watchdog = NULL;
 
-    ros::init(argc, argv, "imu_bno055_i2c_node");
+    ros::init(argc, argv, "bno055_node");
 
     nh = new ros::NodeHandle();
     if(!nh) {

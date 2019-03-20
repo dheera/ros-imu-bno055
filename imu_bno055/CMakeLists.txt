@@ -10,6 +10,7 @@ catkin_package(INCLUDE_DIRS include)
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_executable(bno055_i2c_node src/bno055_i2c_activity.cpp src/bno055_i2c_node.cpp src/watchdog.cpp)
+add_dependencies(bno055_i2c_node diagnostic_msgs_gencpp)
 
 include_directories(${catkin_INCLUDE_DIRS})
 

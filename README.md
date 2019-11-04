@@ -28,7 +28,7 @@ The BNO055 supports I2C and UART communication. This driver supports I2C only. I
         mv ros-imu-bno055 src
         catkin_make
         source devel/setup.bash
-        roslaunch Laser_LIDAR nodos2.launch
+        roslaunch imu_bno055 imu.launch
 
 # You can see list of topic
 

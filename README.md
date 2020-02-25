@@ -20,6 +20,22 @@ The BNO055 supports I2C and UART communication. This driver supports I2C only. I
 * **/reset** (std\_srvs/Trigger) -- resets the IMU
 * **/calibrate** (std\_srvs/Trigger) -- not yet implemented
 
+# Use
+
+        mkdir ws_imu
+        cd ws_imu/
+        git clone https://github.com/dheera/ros-imu-bno055.git
+        mv ros-imu-bno055 src
+        catkin_make
+        source devel/setup.bash
+        roslaunch imu_bno055 imu.launch
+
+# You can see list of topic
+
+        rostopic list
+        rostopic echo imu/data
+        rostopic echo imu/raw
+
 # Usage notes
 
 ## Raspberry Pi

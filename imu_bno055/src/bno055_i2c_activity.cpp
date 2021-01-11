@@ -199,6 +199,21 @@ bool BNO055I2CActivity::spinOnce() {
     msg_data.angular_velocity.y = (double)record.raw_angular_velocity_y / 900.0;
     msg_data.angular_velocity.z = (double)record.raw_angular_velocity_z / 900.0;
 
+    // Source: https://github.com/Vijfendertig/rosserial_adafruit_bno055/blob/532b63db9b0e5e5e9217bd89905001fe979df3a4/src/imu_publisher/imu_publisher.cpp#L42.
+    // The Bosch BNO055 datasheet is pretty useless regarding the sensor's accuracy.
+    // - The accuracy of the magnetometer is +-2.5deg. Users on online forums agree on that number.
+    // - The accuracy of the gyroscope is unknown. I use the +-3deg/s zero rate offset. To be tested.
+    // - The accuracy of the accelerometer is unknown. Based on the typical and maximum zero-g offset (+-80mg and
+    //   +-150mg) and the fact that my graphs look better than that, I use 80mg. To be tested.
+    // Cross-axis errors are not (yet) taken into account. To be tested.
+    for(unsigned row = 0; row < 3; ++ row) {
+      for(unsigned col = 0; col < 3; ++ col) {
+        msg_data.orientation_covariance[row * 3 + col] = (row == col? 0.002: 0.);  // +-2.5deg
+        msg_data.angular_velocity_covariance[row * 3 + col] = (row == col? 0.003: 0.);  // +-3deg/s
+        msg_data.linear_acceleration_covariance[row * 3 + col] = (row == col? 0.60: 0.);  // +-80mg
+      }
+    }
+
     sensor_msgs::Temperature msg_temp;
     msg_temp.header.stamp = time;
     msg_temp.header.frame_id = param_frame_id;

@@ -174,6 +174,8 @@ bool BNO055I2CActivity::spinOnce() {
     #define  R3OFST  BNO055_TEMP_ADDR
     #define  R3LEN   (BNO055_SYS_ERR_ADDR-BNO055_TEMP_ADDR)
 
+    sampleIdx += 1;;
+
     // First read group are mostly raw data values
     // DEBUG ONLY if(_i2c_smbus_read_i2c_block_data(file, (BNO055_ACCEL_DATA_X_LSB_ADDR+R1OFST), R1LEN, &readBuf[0]) != R1LEN)
     if(_i2c_smbus_read_i2c_block_data(file, R1OFST, R1LEN, (uint8_t*)&record) != R1LEN) {
@@ -200,6 +202,17 @@ bool BNO055I2CActivity::spinOnce() {
         return false;
     }
     if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20) != 0x13) {
+        return false;
+    }
+#endif
+
+#define IMU_DISGUARD_FUS_INVALID
+#ifdef  IMU_DISGUARD_FUS_INVALID
+    // IMPORTANT NOTE!  I have seen that there may be an undocumented or hard to find description
+    // of when the fusion data is not good they send all 0xFFFF values for x,y,z  We will exit for such a case with a debug for now
+
+    if ((record.fused_orientation_x == -1) && (record.fused_orientation_y == -1) && (record.fused_orientation_z == -1)) {
+        ROS_INFO("Invalid Orientation smpl%5d ", sampleIdx);
         return false;
     }
 #endif
@@ -259,9 +272,7 @@ bool BNO055I2CActivity::spinOnce() {
     msg_data.angular_velocity.y = (double)record.raw_angular_velocity_y / 900.0;
     msg_data.angular_velocity.z = (double)record.raw_angular_velocity_z / 900.0;
 
-    sampleIdx += 1;;
-
-#define IMU_CHECK_RAW_LIN_ACCEL
+#undef IMU_CHECK_RAW_LIN_ACCEL     // Define this only if you set limit values or this will do major log spam
 #ifdef IMU_CHECK_RAW_LIN_ACCEL
     // For raw linear_acceleration we see upper bit of 16-bit Y value go high for bad data so 006a  becomes 806a
     // Also in other runs we see:         upper bit of 16-bit Z value go high for bad data so 03ca  becomes 83ca
@@ -299,7 +310,8 @@ bool BNO055I2CActivity::spinOnce() {
                   msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
                   u8[0], u8[1], u8[26], u8[0x27]);
     } else {
-        if ((sampleIdx %400) == 1) {
+        if ((0) &&    // Turn off periodic values to minimize log spam
+            (sampleIdx %400) == 1) {
             ROS_INFO("Good OriX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", sampleIdx,
                   msg_data.orientation.x, msg_data.orientation.y, msg_data.orientation.z, record.system_error_code,
                   record.fused_orientation_x, record.fused_orientation_y, record.fused_orientation_z,

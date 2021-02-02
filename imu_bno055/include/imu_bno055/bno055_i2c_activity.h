@@ -199,7 +199,7 @@ namespace imu_bno055 {
 
 // order of this struct is designed to match the I2C registers
 // so all data can be read in one fell swoop
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   int16_t raw_linear_acceleration_x;
   int16_t raw_linear_acceleration_y;
   int16_t raw_linear_acceleration_z;

@@ -138,10 +138,22 @@ bool BNO055I2CActivity::start() {
     return true;
 }
 
+
+// Utility to check if a value is within lower and upper expected range
 int limitCheck(double value, double typValue, double range) {
     int retCode = 0;
 
     if ((value < (typValue - range)) || (value > (typValue + range))) {
+        retCode = 1;
+    }
+    return retCode;
+}
+
+int d15InvertedCheck(uint16_t value) {
+    int retCode = 0;
+    uint16_t d14 = value & 0x4000;
+   
+    if (((value >> 1) & 0x4000) != d14) {
         retCode = 1;
     }
     return retCode;
@@ -160,8 +172,13 @@ bool BNO055I2CActivity::spinOnce() {
 
     seq++;
 
+//  !!! DEBUG DEFINES TO BE REMOVED IN FINAL CODE
+#undef IMU_CHECK_RAW_LIN_ACCEL     // Define this only if you set limit values or this will do major log spam
+#define IMU_CHECK_FUS_ORIENT
 #define IMU_READ_IN_3_GROUPS
-#ifdef  IMU_READ_IN_3_GROUPS
+#undef  IMU_DEBUG_D15              // Define this ONLY for oscilloscope debug.  Do NOT define this for IMU real tests
+
+#ifdef  IMU_READ_IN_3_GROUPS   // {
     // can only read a length of 0x20 at a time, so do it in multiple reads and read into a read buffer
     // These reads are organized on boundries that make sense in the overall data context
     // We read a couple bytes early to avoid possible initial byte corruption seen in development
@@ -176,12 +193,45 @@ bool BNO055I2CActivity::spinOnce() {
 
     sampleIdx += 1;;
 
+
     // First read group are mostly raw data values
     // DEBUG ONLY if(_i2c_smbus_read_i2c_block_data(file, (BNO055_ACCEL_DATA_X_LSB_ADDR+R1OFST), R1LEN, &readBuf[0]) != R1LEN)
     if(_i2c_smbus_read_i2c_block_data(file, R1OFST, R1LEN, (uint8_t*)&record) != R1LEN) {
         return false;
     }
     // DEBUG ONLY memcpy((uint8_t*)&record, &readBuf[OFST], (R1LEN-OFST));    // Copy into our data struct
+
+#ifdef IMU_DEBUG_D15  // {
+    // Check for any of accel X,Y,Z to have the D15 inversion bug and trigger scope if we see the fault
+    uint8_t ioExpVal = 0xff;   // The 0x20 led will go low when a fault is detected
+    int d15Inverted = 0;
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_x);
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_y);
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_z);
+    if (d15Inverted != 0) {
+        ioExpVal &= 0x7f;     // Blink yellow led but also can trigger scope
+        ROS_ERROR("Bad Accel with D15 smpl%5d: 0x%04x,0x%04x,0x%04x", sampleIdx,
+                  record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z);
+    }
+
+    // A bit of fun to blink an led on the IMU board
+    if ((d15Inverted != 0) || ((sampleIdx & 0x20) != 0)) {
+        if ((sampleIdx & 0x10) != 0) {
+            ioExpVal &= 0xdf;     // Blink an led on I2C board
+        }
+        if(ioctl(file, I2C_SLAVE, 0x21) < 0) {
+            ROS_ERROR("i2c ioExpander device open failed");
+            return false;
+        }
+        _i2c_smbus_write_byte_data(file, ioExpVal, ioExpVal);
+
+        // Must return address to IMU after debug access
+        if(ioctl(file, I2C_SLAVE, param_address) < 0) {
+            ROS_ERROR("i2c IMU device open failed");
+            return false;
+        }
+    }
+#endif  // }  IMU_DEBUG_D15
 
     // Second read group are mostly raw data values
     // DEBUG ONLY if(_i2c_smbus_read_i2c_block_data(file, (BNO055_ACCEL_DATA_X_LSB_ADDR + (R2OFST)), R2LEN, &readBuf[0]) != R2LEN)
@@ -204,7 +254,7 @@ bool BNO055I2CActivity::spinOnce() {
     if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20) != 0x13) {
         return false;
     }
-#endif
+#endif //  } IMU_READ_IN_3_GROUPS
 
 #define IMU_DISGUARD_FUS_INVALID
 #ifdef  IMU_DISGUARD_FUS_INVALID
@@ -272,7 +322,6 @@ bool BNO055I2CActivity::spinOnce() {
     msg_data.angular_velocity.y = (double)record.raw_angular_velocity_y / 900.0;
     msg_data.angular_velocity.z = (double)record.raw_angular_velocity_z / 900.0;
 
-#undef IMU_CHECK_RAW_LIN_ACCEL     // Define this only if you set limit values or this will do major log spam
 #ifdef IMU_CHECK_RAW_LIN_ACCEL
     // For raw linear_acceleration we see upper bit of 16-bit Y value go high for bad data so 006a  becomes 806a
     // Also in other runs we see:         upper bit of 16-bit Z value go high for bad data so 03ca  becomes 83ca
@@ -295,9 +344,7 @@ bool BNO055I2CActivity::spinOnce() {
     }
 #endif
 
-#define IMU_CHECK_FUS_ORIENT
 #ifdef IMU_CHECK_FUS_ORIENT
-
     // IMPORTANT NOTE!  I have seen that there may be an undocumented or hard to find description
     // of when the fusion data is not good they send all 0xFFFF values for x,y,z  Perhaps we should detect that and ignore in that case?
 

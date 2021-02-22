@@ -138,6 +138,29 @@ bool BNO055I2CActivity::start() {
     return true;
 }
 
+
+// Utility to check if a value is within lower and upper expected range
+int limitCheck(double value, double typValue, double range) {
+    int retCode = 0;
+
+    if ((value < (typValue - range)) || (value > (typValue + range))) {
+        retCode = 1;
+    }
+    return retCode;
+}
+
+int d15InvertedCheck(uint16_t value) {
+    int retCode = 0;
+    uint16_t d14 = value & 0x4000;
+   
+    if (((value >> 1) & 0x4000) != d14) {
+        retCode = 1;
+    }
+    return retCode;
+}
+ 
+int sampleIdx = 0;
+
 bool BNO055I2CActivity::spinOnce() {
     ros::spinOnce();
 
@@ -149,6 +172,80 @@ bool BNO055I2CActivity::spinOnce() {
 
     seq++;
 
+//  !!! DEBUG DEFINES TO BE REMOVED IN FINAL CODE
+#undef IMU_CHECK_RAW_LIN_ACCEL     // Define this only if you set limit values or this will do major log spam
+#define IMU_CHECK_FUS_ORIENT
+#define IMU_READ_IN_3_GROUPS
+#undef  IMU_DEBUG_D15              // Define this ONLY for oscilloscope debug.  Do NOT define this for IMU real tests
+
+#ifdef  IMU_READ_IN_3_GROUPS   // {
+    // can only read a length of 0x20 at a time, so do it in multiple reads and read into a read buffer
+    // These reads are organized on boundries that make sense in the overall data context
+    // We read a couple bytes early to avoid possible initial byte corruption seen in development
+    // BNO055_LINEAR_ACCEL_DATA_X_LSB_ADDR is the start of the data block that aligns with the IMURecord struct
+    uint8_t readBuf[0x24];
+    #define  R1OFST  BNO055_ACCEL_DATA_X_LSB_ADDR
+    #define  R1LEN   (BNO055_EULER_H_LSB_ADDR-BNO055_ACCEL_DATA_X_LSB_ADDR) 
+    #define  R2OFST  BNO055_EULER_H_LSB_ADDR
+    #define  R2LEN   (BNO055_TEMP_ADDR-BNO055_EULER_H_LSB_ADDR)
+    #define  R3OFST  BNO055_TEMP_ADDR
+    #define  R3LEN   (BNO055_SYS_ERR_ADDR-BNO055_TEMP_ADDR)
+
+    sampleIdx += 1;;
+
+
+    // First read group are mostly raw data values
+    // DEBUG ONLY if(_i2c_smbus_read_i2c_block_data(file, (BNO055_ACCEL_DATA_X_LSB_ADDR+R1OFST), R1LEN, &readBuf[0]) != R1LEN)
+    if(_i2c_smbus_read_i2c_block_data(file, R1OFST, R1LEN, (uint8_t*)&record) != R1LEN) {
+        return false;
+    }
+    // DEBUG ONLY memcpy((uint8_t*)&record, &readBuf[OFST], (R1LEN-OFST));    // Copy into our data struct
+
+#ifdef IMU_DEBUG_D15  // {
+    // Check for any of accel X,Y,Z to have the D15 inversion bug and trigger scope if we see the fault
+    uint8_t ioExpVal = 0xff;   // The 0x20 led will go low when a fault is detected
+    int d15Inverted = 0;
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_x);
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_y);
+    d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_z);
+    if (d15Inverted != 0) {
+        ioExpVal &= 0x7f;     // Blink yellow led but also can trigger scope
+        ROS_ERROR("Bad Accel with D15 smpl%5d: 0x%04x,0x%04x,0x%04x", sampleIdx,
+                  record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z);
+    }
+
+    // A bit of fun to blink an led on the IMU board
+    if ((d15Inverted != 0) || ((sampleIdx & 0x20) != 0)) {
+        if ((sampleIdx & 0x10) != 0) {
+            ioExpVal &= 0xdf;     // Blink an led on I2C board
+        }
+        if(ioctl(file, I2C_SLAVE, 0x21) < 0) {
+            ROS_ERROR("i2c ioExpander device open failed");
+            return false;
+        }
+        _i2c_smbus_write_byte_data(file, ioExpVal, ioExpVal);
+
+        // Must return address to IMU after debug access
+        if(ioctl(file, I2C_SLAVE, param_address) < 0) {
+            ROS_ERROR("i2c IMU device open failed");
+            return false;
+        }
+    }
+#endif  // }  IMU_DEBUG_D15
+
+    // Second read group are mostly raw data values
+    // DEBUG ONLY if(_i2c_smbus_read_i2c_block_data(file, (BNO055_ACCEL_DATA_X_LSB_ADDR + (R2OFST)), R2LEN, &readBuf[0]) != R2LEN)
+    if(_i2c_smbus_read_i2c_block_data(file, R2OFST, R2LEN, ((uint8_t*)&record.fused_heading)) != R2LEN) {
+        return false;
+    }
+    // DEBUG ONLY memcpy(((uint8_t*)&record + (R1LEN-OFST)), &readBuf[0], R2LEN); // fill in rest of our struct
+
+    // The third group are a collection of assorted values not specifically being data themselves
+    if(_i2c_smbus_read_i2c_block_data(file, R3OFST, R3LEN, ((uint8_t*)&record.temperature)) != R3LEN) {
+        return false;
+    }
+
+#else  // Original code
     // can only read a length of 0x20 at a time, so do it in 2 reads
     // BNO055_LINEAR_ACCEL_DATA_X_LSB_ADDR is the start of the data block that aligns with the IMURecord struct
     if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record) != 0x20) {
@@ -157,6 +254,32 @@ bool BNO055I2CActivity::spinOnce() {
     if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20) != 0x13) {
         return false;
     }
+#endif //  } IMU_READ_IN_3_GROUPS
+
+#define IMU_DISGUARD_FUS_INVALID
+#ifdef  IMU_DISGUARD_FUS_INVALID
+    // IMPORTANT NOTE!  I have seen that there may be an undocumented or hard to find description
+    // of when the fusion data is not good they send all 0xFFFF values for x,y,z  We will exit for such a case with a debug for now
+
+    if ((record.fused_orientation_x == -1) && (record.fused_orientation_y == -1) && (record.fused_orientation_z == -1)) {
+        ROS_INFO("Invalid Orientation smpl%5d ", sampleIdx);
+        return false;
+    }
+#endif
+
+    uint8_t *u8;
+    u8 = (uint8_t*)&record;
+#define USE_15_BIT_VALUES
+#ifdef USE_15_BIT_VALUES
+    // MAJOR_HACK to remove single MSB set errors
+    // We will dupliate bit6 into bit 8
+    int idx = 0;
+    uint8_t bit6;
+    for (idx=1; idx<33 ; idx += 2) {
+        bit6 = (u8[idx] & 0x40);
+        u8[idx] = (u8[idx] & 0x7f) | (bit6 << 1);
+    }
+#endif
 
     sensor_msgs::Imu msg_raw;
     msg_raw.header.stamp = time;
@@ -198,6 +321,52 @@ bool BNO055I2CActivity::spinOnce() {
     msg_data.angular_velocity.x = (double)record.raw_angular_velocity_x / 900.0;
     msg_data.angular_velocity.y = (double)record.raw_angular_velocity_y / 900.0;
     msg_data.angular_velocity.z = (double)record.raw_angular_velocity_z / 900.0;
+
+#ifdef IMU_CHECK_RAW_LIN_ACCEL
+    // For raw linear_acceleration we see upper bit of 16-bit Y value go high for bad data so 006a  becomes 806a
+    // Also in other runs we see:         upper bit of 16-bit Z value go high for bad data so 03ca  becomes 83ca
+    if ((limitCheck(msg_raw.linear_acceleration.x, (double)(-0.15), (double)(0.3)) != 0) ||
+        (limitCheck(msg_raw.linear_acceleration.y, (double)(0.76),  (double)(1.5)) != 0) ||
+        (limitCheck(msg_raw.linear_acceleration.z, (double)(9.5),   (double)(1.6)) != 0)) {
+        ROS_INFO("Bad LAcX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+                  msg_raw.linear_acceleration.x, msg_raw.linear_acceleration.y, msg_raw.linear_acceleration.z, record.system_error_code,
+                  record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z,
+                  msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
+                  u8[0], u8[1], u8[26], u8[0x27]);
+    } else {
+        if ((sampleIdx %400) == 1) {
+            ROS_INFO("Good LAcX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+                  msg_raw.linear_acceleration.x, msg_raw.linear_acceleration.y, msg_raw.linear_acceleration.z, record.system_error_code,
+                  record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z,
+                  msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
+                  u8[0], u8[1], u8[26], u8[0x27]);
+        }
+    }
+#endif
+
+#ifdef IMU_CHECK_FUS_ORIENT
+    // IMPORTANT NOTE!  I have seen that there may be an undocumented or hard to find description
+    // of when the fusion data is not good they send all 0xFFFF values for x,y,z  Perhaps we should detect that and ignore in that case?
+
+    if ((limitCheck(msg_data.orientation.x, (double)(0.0), (double)(0.2)) != 0) ||
+        (limitCheck(msg_data.orientation.y, (double)(0.0), (double)(0.2)) != 0) ||
+        (limitCheck(msg_data.orientation.z, (double)(0.0), (double)(0.4)) != 0)) {
+        ROS_INFO("Bad OriX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+                  msg_data.orientation.x, msg_data.orientation.y, msg_data.orientation.z, record.system_error_code,
+                  record.fused_orientation_x, record.fused_orientation_y, record.fused_orientation_z,
+                  msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
+                  u8[0], u8[1], u8[26], u8[0x27]);
+    } else {
+        if ((0) &&    // Turn off periodic values to minimize log spam
+            (sampleIdx %400) == 1) {
+            ROS_INFO("Good OriX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+                  msg_data.orientation.x, msg_data.orientation.y, msg_data.orientation.z, record.system_error_code,
+                  record.fused_orientation_x, record.fused_orientation_y, record.fused_orientation_z,
+                  msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
+                  u8[0], u8[1], u8[26], u8[0x27]);
+        }
+    }
+#endif
 
     // Source: https://github.com/Vijfendertig/rosserial_adafruit_bno055/blob/532b63db9b0e5e5e9217bd89905001fe979df3a4/src/imu_publisher/imu_publisher.cpp#L42.
     // The Bosch BNO055 datasheet is pretty useless regarding the sensor's accuracy.

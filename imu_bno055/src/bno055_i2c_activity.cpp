@@ -17,6 +17,7 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
     nh_priv.param("device", param_device, (std::string)"/dev/i2c-1");
     nh_priv.param("address", param_address, (int)BNO055_ADDRESS_A);
     nh_priv.param("frame_id", param_frame_id, (std::string)"imu");
+    nh_priv.param("operation_mode", param_operation_mode, (std::string)"NDOF");
 
     current_status.level = 0;
     current_status.name = "BNO055 IMU";
@@ -55,8 +56,38 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
 
 // ******** private methods ******** //
 
+int BNO055I2CActivity::operation_mode() {
+    std::map<std::string, int> mode_map {
+        { "ACCONLY", BNO055_OPERATION_MODE_ACCONLY },
+        { "MAGONLY", BNO055_OPERATION_MODE_MAGONLY },
+        { "GYRONLY", BNO055_OPERATION_MODE_GYRONLY },
+        { "ACCMAG", BNO055_OPERATION_MODE_ACCMAG },
+        { "ACCGYRO", BNO055_OPERATION_MODE_ACCGYRO },
+        { "MAGGYRO", BNO055_OPERATION_MODE_MAGGYRO },
+        { "AMG", BNO055_OPERATION_MODE_AMG },
+        { "IMU", BNO055_OPERATION_MODE_IMUPLUS },
+        { "COMPASS", BNO055_OPERATION_MODE_COMPASS },
+        { "M4G", BNO055_OPERATION_MODE_M4G },
+        { "NDOF_FMC_OFF", BNO055_OPERATION_MODE_NDOF_FMC_OFF },
+        { "NDOF", BNO055_OPERATION_MODE_NDOF },
+    };
+
+    if (mode_map.count(param_operation_mode)) {
+        ROS_INFO_STREAM("BNO055 operation mode: " << param_operation_mode);
+        return mode_map.at(param_operation_mode);
+    }
+
+    return -1;
+}
+
 bool BNO055I2CActivity::reset() {
     int i = 0;
+
+    int opr_mode = operation_mode();
+    if (opr_mode < 0) {
+        ROS_ERROR_STREAM("Unknown operation_mode: " << param_operation_mode);
+        return false;
+    }
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_CONFIG);
     ros::Duration(0.025).sleep();
@@ -83,7 +114,7 @@ bool BNO055I2CActivity::reset() {
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
     ros::Duration(0.025).sleep();
 
-    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, BNO055_OPERATION_MODE_NDOF);
+    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, (uint8_t)opr_mode);
     ros::Duration(0.025).sleep();
 
     return true;

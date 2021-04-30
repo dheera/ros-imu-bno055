@@ -243,6 +243,7 @@ class BNO055I2CActivity {
     bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
 
   private:
+    int operation_mode();
     bool reset();
 
     // class variables
@@ -253,6 +254,7 @@ class BNO055I2CActivity {
     // ROS parameters
     std::string param_frame_id;
     std::string param_device;
+    std::string param_operation_mode;
     int param_address;
 
     // ROS node handles

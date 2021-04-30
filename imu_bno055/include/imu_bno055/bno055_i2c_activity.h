@@ -34,6 +34,9 @@
 #define BNO055_BL_REV_ID_ADDR 0X06
 #define BNO055_PAGE_ID_ADDR 0X07
 
+#define BNO055_ACC_CONFIG 0X08 // Page 1
+#define BNO055_GYR_CONFIG_0 0X0A // Page 1
+
 #define BNO055_ACCEL_DATA_X_LSB_ADDR 0X08
 #define BNO055_ACCEL_DATA_X_MSB_ADDR 0X09
 #define BNO055_ACCEL_DATA_Y_LSB_ADDR 0X0A
@@ -244,6 +247,7 @@ class BNO055I2CActivity {
 
   private:
     int operation_mode();
+    bool configure_sensors();
     bool reset();
 
     // class variables
@@ -256,6 +260,10 @@ class BNO055I2CActivity {
     std::string param_device;
     std::string param_operation_mode;
     int param_address;
+    double param_acc_bandwidth;
+    double param_gyro_bandwidth;
+    int param_acc_range;
+    int param_gyro_range;
 
     // ROS node handles
     ros::NodeHandle nh;

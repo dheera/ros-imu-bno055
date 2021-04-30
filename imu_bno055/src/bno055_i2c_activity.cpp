@@ -18,6 +18,10 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
     nh_priv.param("address", param_address, (int)BNO055_ADDRESS_A);
     nh_priv.param("frame_id", param_frame_id, (std::string)"imu");
     nh_priv.param("operation_mode", param_operation_mode, (std::string)"NDOF");
+    nh_priv.param("acc_bandwidth", param_acc_bandwidth, 62.5);
+    nh_priv.param("acc_range", param_acc_range, 4);
+    nh_priv.param("gyro_bandwidth", param_gyro_bandwidth, 32.0);
+    nh_priv.param("gyro_range", param_gyro_range, 2000);
 
     current_status.level = 0;
     current_status.name = "BNO055 IMU";
@@ -80,6 +84,81 @@ int BNO055I2CActivity::operation_mode() {
     return -1;
 }
 
+bool BNO055I2CActivity::configure_sensors() {
+    std::map<double, uint8_t> acc_bw {
+        { 7.81, 0 },
+        { 15.63, 1 },
+        { 31.25, 2 },
+        { 62.5, 3 },
+        { 125.0, 4 },
+        { 250.0, 5 },
+        { 500.0, 6 },
+        { 1000.0, 7 },
+    };
+
+    std::map<int, uint8_t> acc_range {
+        { 2, 0 },
+        { 4, 1 },
+        { 8, 2 },
+        { 16, 3 },
+    };
+
+    std::map<double, uint8_t> gyro_bw {
+        { 523.0, 0 },
+        { 230.0, 1 },
+        { 116.0, 2 },
+        { 47.0, 3 },
+        { 23.0, 4 },
+        { 12.0, 5 },
+        { 64.0, 6 },
+        { 32.0, 7 },
+    };
+
+    std::map<int, uint8_t> gyro_range {
+        { 2000, 0 },
+        { 1000, 1 },
+        { 500, 2 },
+        { 250, 3 },
+        { 125, 4 },
+    };
+
+    if (!acc_bw.count(param_acc_bandwidth)) {
+        ROS_ERROR_STREAM("Unsupported acc_bandwidth: " << param_acc_bandwidth);
+        return false;
+    }
+
+    if (!acc_range.count(param_acc_range)) {
+        ROS_ERROR_STREAM("Unsupported acc_range: " << param_acc_range);
+        return false;
+    }
+
+    if (!gyro_bw.count(param_gyro_bandwidth)) {
+        ROS_ERROR_STREAM("Unsupported gyro_bandwidth: " << param_gyro_bandwidth);
+        return false;
+    }
+
+    if (!gyro_range.count(param_gyro_range)) {
+        ROS_ERROR_STREAM("Unsupported gyro_range: " << param_gyro_range);
+        return false;
+    }
+
+    ROS_INFO_STREAM("Accelerometer range: +/-" << param_acc_range << "G, bandwidth: " << param_acc_bandwidth << "Hz");
+    ROS_INFO_STREAM("Gyroscope range: +/-" << param_gyro_range << "dps, bandwidth: " << param_gyro_bandwidth << "Hz");
+
+
+    uint8_t acc = acc_range.at(param_acc_range) | (acc_bw.at(param_acc_bandwidth) << 2);
+    uint8_t gyro = gyro_range.at(param_gyro_range) | (gyro_bw.at(param_gyro_bandwidth) << 3);
+
+    _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 1);
+
+    _i2c_smbus_write_byte_data(file, BNO055_ACC_CONFIG, acc);
+    _i2c_smbus_write_byte_data(file, BNO055_GYR_CONFIG_0, gyro);
+
+    _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
+
+    return true;
+}
+
 bool BNO055I2CActivity::reset() {
     int i = 0;
 
@@ -116,6 +195,12 @@ bool BNO055I2CActivity::reset() {
 
     _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, (uint8_t)opr_mode);
     ros::Duration(0.025).sleep();
+
+    if (opr_mode < BNO055_OPERATION_MODE_IMUPLUS) {
+        if (!configure_sensors()) {
+            return false;
+        }
+    }
 
     return true;
 }

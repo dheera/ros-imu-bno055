@@ -160,9 +160,9 @@ bool BNO055I2CActivity::spinOnce() {
             .buf = &reg,
         },
         {
-            /* TODO: I2C_M_NOSTART support assumed, add some code to check I2C_FUNC_NOSTART for portability */
+            // TODO: I2C_M_NOSTART would be nice together with I2C_M_RD but it seems to be not supported by i2c-gpio.c (I2C_FUNC_NOSTART).
             .addr = (uint16_t)param_address,
-            .flags = I2C_M_RD | I2C_M_NOSTART,
+            .flags = I2C_M_RD,
             .len = sizeof(record),
             .buf = (unsigned char *)&record,
         },

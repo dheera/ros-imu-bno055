@@ -6,6 +6,7 @@
  */
 
 #include "imu_bno055/bno055_i2c_activity.h"
+#include <linux/i2c.h>
 
 namespace imu_bno055 {
 
@@ -264,14 +265,31 @@ bool BNO055I2CActivity::spinOnce() {
 
     seq++;
 
-    // can only read a length of 0x20 at a time, so do it in 2 reads
-    // BNO055_LINEAR_ACCEL_DATA_X_LSB_ADDR is the start of the data block that aligns with the IMURecord struct
-    if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR, 0x20, (uint8_t*)&record) != 0x20) {
+    unsigned char reg = BNO055_ACCEL_DATA_X_LSB_ADDR;
+
+    struct i2c_msg msgs[] {
+        {
+            .addr = (uint16_t)param_address,
+            .flags = 0,
+            .len = 1,
+            .buf = &reg,
+        },
+        {
+            // TODO: I2C_M_NOSTART would be nice together with I2C_M_RD but it seems to be not supported by i2c-gpio.c (I2C_FUNC_NOSTART).
+            .addr = (uint16_t)param_address,
+            .flags = I2C_M_RD,
+            .len = sizeof(record),
+            .buf = (unsigned char *)&record,
+        },
+    };
+
+    struct i2c_rdwr_ioctl_data msgset {
+        .msgs = msgs,
+        .nmsgs = sizeof(msgs)/sizeof(*msgs),
+    };
+
+    if (ioctl(file, I2C_RDWR, &msgset) < 0)
         return false;
-    }
-    if(_i2c_smbus_read_i2c_block_data(file, BNO055_ACCEL_DATA_X_LSB_ADDR + 0x20, 0x13, (uint8_t*)&record + 0x20) != 0x13) {
-        return false;
-    }
 
     sensor_msgs::Imu msg_raw;
     msg_raw.header.stamp = time;

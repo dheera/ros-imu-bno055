@@ -23,6 +23,9 @@ BNO055I2CActivity::BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_
     nh_priv.param("acc_range", param_acc_range, 4);
     nh_priv.param("gyro_bandwidth", param_gyro_bandwidth, 32.0);
     nh_priv.param("gyro_range", param_gyro_range, 2000);
+    nh_priv.param("enable_raw", param_enable_raw, true);
+    nh_priv.param("enable_data", param_enable_data, true);
+    nh_priv.param("enable_status", param_enable_status, true);
 
     current_status.level = 0;
     current_status.name = "BNO055 IMU";
@@ -261,35 +264,104 @@ bool BNO055I2CActivity::spinOnce() {
 
     IMURecord record;
 
-    unsigned char c = 0;
-
     seq++;
 
-    unsigned char reg = BNO055_ACCEL_DATA_X_LSB_ADDR;
+    struct i2c_rdwr_ioctl_data msgset = { 0 };
 
-    struct i2c_msg msgs[] {
-        {
-            .addr = (uint16_t)param_address,
-            .flags = 0,
-            .len = 1,
-            .buf = &reg,
-        },
-        {
-            // TODO: I2C_M_NOSTART would be nice together with I2C_M_RD but it seems to be not supported by i2c-gpio.c (I2C_FUNC_NOSTART).
-            .addr = (uint16_t)param_address,
-            .flags = I2C_M_RD,
-            .len = sizeof(record),
-            .buf = (unsigned char *)&record,
-        },
-    };
+    // TODO: I2C_M_NOSTART would be nice together with I2C_M_RD but it seems to be not supported by i2c-gpio.c (I2C_FUNC_NOSTART).
 
-    struct i2c_rdwr_ioctl_data msgset {
-        .msgs = msgs,
-        .nmsgs = sizeof(msgs)/sizeof(*msgs),
-    };
+    const uint16_t raw_len = 9 * sizeof(int16_t);
+    const uint16_t data_len = 13 * sizeof(uint16_t);
+    const uint16_t status_len = 7;
 
-    if (ioctl(file, I2C_RDWR, &msgset) < 0)
+    if (param_enable_raw && !param_enable_data && param_enable_status) {
+        // Special case, we need to do two reads
+
+        unsigned char reg1 = BNO055_ACCEL_DATA_X_LSB_ADDR;
+        unsigned char reg2 = BNO055_TEMP_ADDR;
+
+        struct i2c_msg msgs[] {
+            {
+                .addr = (uint16_t)param_address,
+                .flags = 0,
+                .len = 1,
+                .buf = &reg1,
+            },
+            {
+                .addr = (uint16_t)param_address,
+                .flags = I2C_M_RD,
+                .len = raw_len,
+                .buf = (unsigned char *)&record,
+            },
+            {
+                .addr = (uint16_t)param_address,
+                .flags = 0,
+                .len = 1,
+                .buf = &reg2,
+            },
+            {
+                .addr = (uint16_t)param_address,
+                .flags = I2C_M_RD,
+                .len = 7,
+                .buf = (unsigned char *)&record.temperature,
+            },
+        };
+
+        msgset.msgs = msgs;
+        msgset.nmsgs = sizeof(msgs)/sizeof(*msgs);
+    } else if (param_enable_raw || param_enable_data || param_enable_status) {
+        unsigned char reg;
+        uint16_t len = 0;
+        unsigned char *buf;
+
+        if (param_enable_raw) {
+            reg = BNO055_ACCEL_DATA_X_LSB_ADDR;
+            buf = (unsigned char *)&record;
+        } else if (param_enable_data) {
+            reg = BNO055_EULER_H_LSB_ADDR;
+            buf = (unsigned char *)&record.fused_heading;
+        } else {
+            reg = BNO055_TEMP_ADDR;
+            buf = (unsigned char *)&record.temperature;
+        }
+
+        if (param_enable_raw) {
+            len += raw_len;
+        }
+
+        if (param_enable_data) {
+            len += data_len;
+        }
+
+        if (param_enable_status) {
+            len += status_len;
+        }
+
+        struct i2c_msg msgs[] {
+            {
+                .addr = (uint16_t)param_address,
+                .flags = 0,
+                .len = 1,
+                .buf = &reg,
+            },
+            {
+                .addr = (uint16_t)param_address,
+                .flags = I2C_M_RD,
+                .len = len,
+                .buf = buf,
+            },
+        };
+
+        msgset.msgs = msgs;
+        msgset.nmsgs = sizeof(msgs)/sizeof(*msgs);
+    } else {
+        // No I2C operation
+        return true;
+    }
+
+    if (ioctl(file, I2C_RDWR, &msgset) < 0) {
         return false;
+    }
 
     sensor_msgs::Imu msg_raw;
     msg_raw.header.stamp = time;
@@ -353,10 +425,18 @@ bool BNO055I2CActivity::spinOnce() {
     msg_temp.header.seq = seq;
     msg_temp.temperature = (double)record.temperature;
 
-    pub_data.publish(msg_data);
-    pub_raw.publish(msg_raw);
-    pub_mag.publish(msg_mag);
-    pub_temp.publish(msg_temp);
+    if (param_enable_data) {
+        pub_data.publish(msg_data);
+    }
+
+    if (param_enable_raw) {
+        pub_raw.publish(msg_raw);
+        pub_mag.publish(msg_mag);
+    }
+
+    if (param_enable_status) {
+        pub_temp.publish(msg_temp);
+    }
 
     if(seq % 50 == 0) {
         current_status.values[DIAG_CALIB_STAT].value = std::to_string(record.calibration_status);

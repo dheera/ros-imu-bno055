@@ -264,6 +264,9 @@ class BNO055I2CActivity {
     double param_gyro_bandwidth;
     int param_acc_range;
     int param_gyro_range;
+    bool param_enable_raw;
+    bool param_enable_data;
+    bool param_enable_status;
 
     // ROS node handles
     ros::NodeHandle nh;

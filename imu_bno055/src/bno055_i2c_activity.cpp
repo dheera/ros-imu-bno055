@@ -152,12 +152,18 @@ bool BNO055I2CActivity::configure_sensors() {
     uint8_t acc = acc_range.at(param_acc_range) | (acc_bw.at(param_acc_bandwidth) << 2);
     uint8_t gyro = gyro_range.at(param_gyro_range) | (gyro_bw.at(param_gyro_bandwidth) << 3);
 
+    // TODO: Do we actually need to sleep here?
     _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 1);
+    ros::Duration(0.025).sleep();
 
     _i2c_smbus_write_byte_data(file, BNO055_ACC_CONFIG, acc);
+    ros::Duration(0.025).sleep();
+
     _i2c_smbus_write_byte_data(file, BNO055_GYR_CONFIG_0, gyro);
+    ros::Duration(0.025).sleep();
 
     _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
+    ros::Duration(0.025).sleep();
 
     return true;
 }
@@ -192,6 +198,7 @@ bool BNO055I2CActivity::reset() {
     _i2c_smbus_write_byte_data(file, BNO055_PWR_MODE_ADDR, BNO055_POWER_MODE_NORMAL);
     ros::Duration(0.010).sleep();
 
+    // TODO: Do we actually need this? Page ID should be zero after reset
     _i2c_smbus_write_byte_data(file, BNO055_PAGE_ID_ADDR, 0);
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
     ros::Duration(0.025).sleep();

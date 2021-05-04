@@ -196,14 +196,14 @@ bool BNO055I2CActivity::reset() {
     _i2c_smbus_write_byte_data(file, BNO055_SYS_TRIGGER_ADDR, 0);
     ros::Duration(0.025).sleep();
 
-    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, (uint8_t)opr_mode);
-    ros::Duration(0.025).sleep();
-
     if (opr_mode < BNO055_OPERATION_MODE_IMUPLUS) {
         if (!configure_sensors()) {
             return false;
         }
     }
+
+    _i2c_smbus_write_byte_data(file, BNO055_OPR_MODE_ADDR, (uint8_t)opr_mode);
+    ros::Duration(0.025).sleep();
 
     return true;
 }

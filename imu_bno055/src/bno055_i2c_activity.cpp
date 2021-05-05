@@ -222,8 +222,8 @@ bool BNO055I2CActivity::start() {
 
     if(!pub_data && param_enable_data) pub_data = nh.advertise<sensor_msgs::Imu>("data", 1);
     if(!pub_raw && param_enable_raw) pub_raw = nh.advertise<sensor_msgs::Imu>("raw", 1);
-    if(!pub_mag) pub_mag = nh.advertise<sensor_msgs::MagneticField>("mag", 1);
-    if(!pub_temp) pub_temp = nh.advertise<sensor_msgs::Temperature>("temp", 1);
+    if(!pub_mag && param_enable_raw) pub_mag = nh.advertise<sensor_msgs::MagneticField>("mag", 1);
+    if(!pub_temp && param_enable_status) pub_temp = nh.advertise<sensor_msgs::Temperature>("temp", 1);
     if(!pub_status && param_enable_status) pub_status = nh.advertise<diagnostic_msgs::DiagnosticStatus>("status", 1);
 
     if(!service_calibrate) service_calibrate = nh.advertiseService(

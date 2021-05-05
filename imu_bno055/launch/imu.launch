@@ -1,7 +1,21 @@
 <launch>
+    <!-- bno datasheet https://cdn-shop.adafruit.com/datasheets/BST_BNO055_DS000_12.pdf -->
     <node ns="imu" name="imu_node" pkg="imu_bno055" type="bno055_i2c_node" respawn="true" respawn_delay="2">
         <param name="device" type="string" value="/dev/i2c-1"/>
         <param name="address" type="int" value="40"/> <!-- 0x28 == 40 is the default for BNO055 -->
         <param name="frame_id" type="string" value="imu"/>
+        <param name="operation_mode" type="string" value="ACCGYRO"/> <!-- Possible values: datasheet page 20-->
+        
+        <!--Possible values: 7.81, 15.63, 31.25,62.5, 125.0, 250.0, 500.0, 1000.0,
+        if operation_mode is set to one of Non-fusionmodes (see datasheet page 20) acc_bandwidth does not work-->
+        <param name="acc_bandwidth" type="double" value="15.63"/>  
+        
+        <!-- enabling/disabling some of the sensor data readings -->
+        <param name="enable_raw" type="bool" value="true"/>
+        <param name="enable_data" type="bool" value="false"/>
+        <param name="enable_status" type="bool" value="false"/>
+        
+        <!-- rate at which imu data is sent to ros topic (Hz) -->
+        <param name="rate" type="int" value="32"/>
     </node>
 </launch>

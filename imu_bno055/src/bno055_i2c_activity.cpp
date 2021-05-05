@@ -284,8 +284,6 @@ int d15InvertedCheck(uint16_t value) {
     }
     return retCode;
 }
- 
-int sampleIdx = 0;
 
 bool BNO055I2CActivity::spinOnce() {
     ros::spinOnce();
@@ -393,8 +391,6 @@ bool BNO055I2CActivity::spinOnce() {
         return false;
     }
 
-sampleIdx++;
-
 #ifdef IMU_DEBUG_D15  // {
     // Check for any of accel X,Y,Z to have the D15 inversion bug and trigger scope if we see the fault
     uint8_t ioExpVal = 0xff;   // The 0x20 led will go low when a fault is detected
@@ -404,13 +400,13 @@ sampleIdx++;
     d15Inverted |= d15InvertedCheck(record.raw_linear_acceleration_z);
     if (d15Inverted != 0) {
         ioExpVal &= 0x7f;     // Blink yellow led but also can trigger scope
-        ROS_ERROR("Bad Accel with D15 smpl%5d: 0x%04x,0x%04x,0x%04x", sampleIdx,
+        ROS_ERROR("Bad Accel with D15 smpl%5d: 0x%04x,0x%04x,0x%04x", seq,
                   record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z);
     }
 
     // A bit of fun to blink an led on the IMU board
-    if ((d15Inverted != 0) || ((sampleIdx & 0x20) != 0)) {
-        if ((sampleIdx & 0x10) != 0) {
+    if ((d15Inverted != 0) || ((seq & 0x20) != 0)) {
+        if ((seq & 0x10) != 0) {
             ioExpVal &= 0xdf;     // Blink an led on I2C board
         }
         if(ioctl(file, I2C_SLAVE, 0x21) < 0) {
@@ -433,7 +429,7 @@ sampleIdx++;
     // of when the fusion data is not good they send all 0xFFFF values for x,y,z  We will exit for such a case with a debug for now
 
     if ((record.fused_orientation_x == -1) && (record.fused_orientation_y == -1) && (record.fused_orientation_z == -1)) {
-        ROS_INFO("Invalid Orientation smpl%5d ", sampleIdx);
+        ROS_INFO("Invalid Orientation smpl%5d ", seq);
         return false;
     }
 #endif
@@ -499,14 +495,14 @@ sampleIdx++;
     if ((limitCheck(msg_raw.linear_acceleration.x, (double)(-0.15), (double)(0.3)) != 0) ||
         (limitCheck(msg_raw.linear_acceleration.y, (double)(0.76),  (double)(1.5)) != 0) ||
         (limitCheck(msg_raw.linear_acceleration.z, (double)(9.5),   (double)(1.6)) != 0)) {
-        ROS_INFO("Bad LAcX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+        ROS_INFO("Bad LAcX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", seq,
                   msg_raw.linear_acceleration.x, msg_raw.linear_acceleration.y, msg_raw.linear_acceleration.z, record.system_error_code,
                   record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z,
                   msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
                   u8[0], u8[1], u8[26], u8[0x27]);
     } else {
-        if ((sampleIdx %400) == 1) {
-            ROS_INFO("Good LAcX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+        if ((seq %400) == 1) {
+            ROS_INFO("Good LAcX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", seq,
                   msg_raw.linear_acceleration.x, msg_raw.linear_acceleration.y, msg_raw.linear_acceleration.z, record.system_error_code,
                   record.raw_linear_acceleration_x, record.raw_linear_acceleration_y, record.raw_linear_acceleration_z,
                   msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
@@ -522,15 +518,15 @@ sampleIdx++;
     if ((limitCheck(msg_data.orientation.x, (double)(0.0), (double)(0.2)) != 0) ||
         (limitCheck(msg_data.orientation.y, (double)(0.0), (double)(0.2)) != 0) ||
         (limitCheck(msg_data.orientation.z, (double)(0.0), (double)(0.4)) != 0)) {
-        ROS_INFO("Bad OriX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+        ROS_INFO("Bad OriX smpl%5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf] [00] %02x %02x  [26]: %02x %02x", seq,
                   msg_data.orientation.x, msg_data.orientation.y, msg_data.orientation.z, record.system_error_code,
                   record.fused_orientation_x, record.fused_orientation_y, record.fused_orientation_z,
                   msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,
                   u8[0], u8[1], u8[26], u8[0x27]);
     } else {
         if ((0) &&    // Turn off periodic values to minimize log spam
-            (sampleIdx %400) == 1) {
-            ROS_INFO("Good OriX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", sampleIdx,
+            (seq %400) == 1) {
+            ROS_INFO("Good OriX smpl %5d: %5.3f %5.3f %5.3f err=0x%x [0x%04x,0x%04x,0x%04x] %5.3lf [%d,%5.3lf]  [00] %02x %02x  [26]: %02x %02x", seq,
                   msg_data.orientation.x, msg_data.orientation.y, msg_data.orientation.z, record.system_error_code,
                   record.fused_orientation_x, record.fused_orientation_y, record.fused_orientation_z,
                   msg_data.orientation.x, record.fused_orientation_x, fused_orientation_norm,

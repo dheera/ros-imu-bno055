@@ -34,6 +34,9 @@
 #define BNO055_BL_REV_ID_ADDR 0X06
 #define BNO055_PAGE_ID_ADDR 0X07
 
+#define BNO055_ACC_CONFIG 0X08 // Page 1
+#define BNO055_GYR_CONFIG_0 0X0A // Page 1
+
 #define BNO055_ACCEL_DATA_X_LSB_ADDR 0X08
 #define BNO055_ACCEL_DATA_X_MSB_ADDR 0X09
 #define BNO055_ACCEL_DATA_Y_LSB_ADDR 0X0A
@@ -199,7 +202,7 @@ namespace imu_bno055 {
 
 // order of this struct is designed to match the I2C registers
 // so all data can be read in one fell swoop
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   int16_t raw_linear_acceleration_x;
   int16_t raw_linear_acceleration_y;
   int16_t raw_linear_acceleration_z;
@@ -243,6 +246,8 @@ class BNO055I2CActivity {
     bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
 
   private:
+    int operation_mode();
+    bool configure_sensors();
     bool reset();
 
     // class variables
@@ -253,7 +258,15 @@ class BNO055I2CActivity {
     // ROS parameters
     std::string param_frame_id;
     std::string param_device;
+    std::string param_operation_mode;
     int param_address;
+    double param_acc_bandwidth;
+    double param_gyro_bandwidth;
+    int param_acc_range;
+    int param_gyro_range;
+    bool param_enable_raw;
+    bool param_enable_data;
+    bool param_enable_status;
 
     // ROS node handles
     ros::NodeHandle nh;

@@ -1,21 +1,16 @@
-#ifndef _bno055_i2c_activity_dot_h
-#define _bno055_i2c_activity_dot_h
+#ifndef _bno055_i2c_driver_dot_h
+#define _bno055_i2c_driver_dot_h
 
 #include <ros/ros.h>
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <stdexcept>
 #include <sys/ioctl.h>
 #include <fcntl.h>
-
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/MagneticField.h>
-#include <sensor_msgs/Temperature.h>
-#include <std_srvs/Trigger.h>
-#include <std_msgs/UInt8.h>
-#include <diagnostic_msgs/DiagnosticStatus.h>
-#include <diagnostic_msgs/DiagnosticArray.h>
-#include <diagnostic_msgs/KeyValue.h>
+#include <iostream>
+#include <chrono>
+#include <thread>
 
 #include <linux/i2c-dev.h>
 #include <smbus_functions.h>
@@ -231,46 +226,23 @@ typedef struct {
   uint8_t system_error_code;
 } IMURecord;
 
-class BNO055I2CActivity {
+class BNO055I2CDriver {
   public:
-    BNO055I2CActivity(ros::NodeHandle &_nh, ros::NodeHandle &_nh_priv);
-
-    bool start();
-    bool stop();
-    bool spinOnce();
-
-    bool onServiceReset(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
-    bool onServiceCalibrate(std_srvs::Trigger::Request &req, std_srvs::Trigger::Response &res);
+    BNO055I2CDriver(std::string device_, int address_);
+    void init();
+    bool reset();
+    IMURecord read();
 
   private:
-    bool reset();
-
+    
     // class variables
-    uint32_t seq = 0;
     int file;
-    diagnostic_msgs::DiagnosticStatus current_status;
 
-    // ROS parameters
-    std::string param_frame_id;
-    std::string param_device;
-    int param_address;
-
-    // ROS node handles
-    ros::NodeHandle nh;
-    ros::NodeHandle nh_priv;
-
-    // ROS publishers
-    ros::Publisher pub_data;
-    ros::Publisher pub_raw;
-    ros::Publisher pub_mag;
-    ros::Publisher pub_temp;
-    ros::Publisher pub_status;
-
-    // ROS subscribers
-    ros::ServiceServer service_calibrate;
-    ros::ServiceServer service_reset;
+    // parameters
+    std::string device;
+    int address;
 };
 
 }
 
-#endif // _bno055_i2c_activity_dot_h
+#endif // _bno055_i2c_driver_dot_h

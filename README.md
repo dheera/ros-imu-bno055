@@ -1,8 +1,25 @@
-# ROS driver for IMU Bosch BNO055 (I2C)
+# ROS1/ROS2 C++ driver for IMU Bosch BNO055 (I2C)
 
 This is a ROS node for the BNO055 IMU that communicates via I2C and without any dependencies besides libi2c-dev. It does **not** require RTIMULib, RTIMULib2, RTIMULib3 or whatever the latest sequel is. It is specifically targeted at using a BNO055 with NVIDIA boards such as the TX1, TX2, and Xavier, or any other board that has native I2C.
 
 The BNO055 supports I2C and UART communication. This driver supports I2C only. If you are looking for a UART driver, see [this driver](https://github.com/mdrwiega/bosch_imu_driver) by [mdrwiega](https://github.com/mdrwiega) instead.
+
+## Configuration
+
+Just copy the appropriate CMakeLists file:
+
+```
+cp CMakeLists.ros1.txt CMakeLists.txt    # for ROS1
+cp CMakeLists.ros2.txt CMakeLists.txt    # for ROS2
+```
+
+and then you are ready to drop this package into a catkin (ROS1) or colcon (ROS2) workspace.
+
+## How to run
+```
+rosrun imu_bno055 bno055_i2c_node        # for ROS1
+ros2 run imu_bno055 bno055_i2c_node      # for ROS2
+```
 
 ## Parameters:
 

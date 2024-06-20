@@ -1,7 +1,6 @@
 #ifndef _bno055_i2c_driver_dot_h
 #define _bno055_i2c_driver_dot_h
 
-#include <ros/ros.h>
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>

@@ -8,9 +8,14 @@ The BNO055 supports I2C and UART communication. This driver supports I2C only. I
 
 * [Adafruit](https://www.adafruit.com/product/4646) or [Adafruit](https://www.adafruit.com/product/2472)
 
-## Configuration
+## Installation
 
-Just copy the appropriate CMakeLists file:
+Install the prerequisites:
+```
+sudo apt install libi2c-dev
+```
+
+Copy or rename the appropriate CMakeLists file:
 
 ```
 cp CMakeLists.ros1.txt CMakeLists.txt    # for ROS1

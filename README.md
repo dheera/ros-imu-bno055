@@ -1,6 +1,6 @@
 # ROS1/ROS2 C++ driver for Bosch BNO055 IMU (I2C)
 
-This is a light weight, C++ ROS node for the BNO055 IMU that communicates via I2C and without any dependencies besides libi2c-dev. It does **not** require RTIMULib, RTIMULib2, RTIMULib3 or whatever the latest sequel is. It is specifically targeted at using a BNO055 with NVIDIA Jetson (Xavier, Orin, etc.) platforms but should work with a Raspberry Pi 5 as well.
+This is a light weight, C++ ROS node for the BNO055 IMU that communicates via I2C and without any dependencies besides libi2c-dev. It is specifically targeted at using a BNO055 with NVIDIA Jetson (Xavier, Orin, etc.) platforms but should work with a Raspberry Pi 5, or in an earlier Raspberry Pi using the software I2C mode.
 
 The BNO055 supports I2C and UART communication. This driver supports I2C only. If you are looking for a UART driver, see [this driver](https://github.com/mdrwiega/bosch_imu_driver) by [mdrwiega](https://github.com/mdrwiega) instead.
 

@@ -15,13 +15,6 @@ Install the prerequisites:
 sudo apt install libi2c-dev
 ```
 
-Copy or rename the appropriate CMakeLists file:
-
-```
-cp CMakeLists.ros1.txt CMakeLists.txt    # for ROS1
-cp CMakeLists.ros2.txt CMakeLists.txt    # for ROS2
-```
-
 and then you are ready to drop this package into a catkin (ROS1) or colcon (ROS2) workspace.
 
 ## How to run
@@ -59,4 +52,3 @@ The Raspberry Pi <=4 hardware I2C does not support clock stretching. You have a 
 ## NVIDIA Jetson platforms
 
 You may need to add your user to the i2c group, e.g. `sudo usermod -aG i2c nvidia`. It should just work after that.
-

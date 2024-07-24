@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(imu_bno055)
-
 add_compile_options(-std=c++14 -li2c)
 
 find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs std_msgs diagnostic_msgs)
@@ -21,4 +18,3 @@ install(TARGETS bno055_i2c_node
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-

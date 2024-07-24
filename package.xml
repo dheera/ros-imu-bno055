@@ -8,6 +8,7 @@
   <license>BSD</license>
   <buildtool_depend condition="$ROS_VERSION == 1">catkin</buildtool_depend>
 
+  <build_depend>ros_environment</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
